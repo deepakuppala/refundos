@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Merchant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Customer {
+  id    String @id @default(cuid())
+  name  String
+  email String
+
+  orders Order[]
+}
+
+model Vendor {
+  id                String   @id @default(cuid())
+  name              String
+  razorpayAccountId String
+  availableBalance  Int
+  settlementStatus  String
+
+  orderItems        OrderItem[]
+  transfers         Transfer[]
+  settlements       Settlement[]
+  refundAllocations RefundAllocation[]
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  customerId  String
+  totalAmount Int
+  currency    String   @default("INR")
+  status      String
+  createdAt   DateTime @default(now())
+
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  items       OrderItem[]
+  payments    Payment[]
+  refundReqs  RefundRequest[]
+}
+
+model OrderItem {
+  id               String @id @default(cuid())
+  orderId          String
+  vendorId         String
+  description      String
+  quantity         Int
+  unitAmount       Int
+  taxAmount        Int
+  refundableAmount Int
+
+  order            Order     @relation(fields: [orderId], references: [id])
+  vendor           Vendor    @relation(fields: [vendorId], references: [id])
+  taxLines         TaxLine[]
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  orderId           String
+  razorpayPaymentId String   @unique
+  amount            Int
+  status            String
+  capturedAt        DateTime?
+
+  order             Order    @relation(fields: [orderId], references: [id])
+  transfers         Transfer[]
+  refundReqs        RefundRequest[]
+}
+
+model Transfer {
+  id                 String   @id @default(cuid())
+  paymentId          String
+  vendorId           String
+  razorpayTransferId String   @unique
+  amount             Int
+  status             String
+  settlementStatus   String
+  createdAt          DateTime @default(now())
+
+  payment            Payment      @relation(fields: [paymentId], references: [id])
+  vendor             Vendor       @relation(fields: [vendorId], references: [id])
+  settlements        Settlement[]
+  reversals          Reversal[]
+}
+
+model Settlement {
+  id         String   @id @default(cuid())
+  transferId String
+  vendorId   String
+  amount     Int
+  status     String
+  settledAt  DateTime?
+
+  transfer   Transfer @relation(fields: [transferId], references: [id])
+  vendor     Vendor   @relation(fields: [vendorId], references: [id])
+}
+
+model RefundRequest {
+  id              String   @id @default(cuid())
+  orderId         String
+  paymentId       String
+  amount          Int
+  reason          String
+  affectedItemIds String // JSON string
+  status          String
+  confidenceScore Float?
+  createdAt       DateTime @default(now())
+
+  order           Order    @relation(fields: [orderId], references: [id])
+  payment         Payment  @relation(fields: [paymentId], references: [id])
+  allocations     RefundAllocation[]
+  exceptions      ExceptionCase[]
+}
+
+model RefundAllocation {
+  id              String @id @default(cuid())
+  refundRequestId String
+  vendorId        String
+  principalAmount Int
+  taxAmount       Int
+  totalAmount     Int
+  transferId      String
+  reason          String
+
+  refundRequest   RefundRequest @relation(fields: [refundRequestId], references: [id])
+  vendor          Vendor        @relation(fields: [vendorId], references: [id])
+}
+
+model Reversal {
+  id                 String @id @default(cuid())
+  refundRequestId    String
+  transferId         String
+  amount             Int
+  razorpayReversalId String?
+  status             String
+
+  transfer           Transfer @relation(fields: [transferId], references: [id])
+}
+
+model TaxLine {
+  id          String @id @default(cuid())
+  orderItemId String
+  type        String
+  rate        Float
+  amount      Int
+  status      String
+
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+}
+
+model ReconciliationRecord {
+  id             String @id @default(cuid())
+  entityType     String
+  entityId       String
+  matchedRecords String // JSON string
+  confidence     Float
+  status         String
+  explanation    String
+}
+
+model ExceptionCase {
+  id                String @id @default(cuid())
+  refundRequestId   String
+  type              String
+  severity          String
+  reason            String
+  recommendedAction String
+  status            String
+
+  refundRequest     RefundRequest @relation(fields: [refundRequestId], references: [id])
+}
+
+model WebhookEvent {
+  id             String   @id @default(cuid())
+  razorpayEventId String  @unique
+  eventType      String
+  payload        String   // JSON string
+  processed      Boolean  @default(false)
+  receivedAt     DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actor       String
+  action      String
+  entityType  String
+  entityId    String
+  beforeState String   // JSON string
+  afterState  String   // JSON string
+  explanation String
+  createdAt   DateTime @default(now())
+}
