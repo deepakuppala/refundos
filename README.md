@@ -1,59 +1,61 @@
 # RefundOS — AI Finance Controller
 
-**AI that decides where every refund belongs — and proves the books reconcile.**
+> **AI that decides where every refund belongs — and proves the books reconcile.**
 
-RefundOS is an AI-powered finance controller for marketplaces that split a single customer payment across multiple vendors. It reconstructs complex financial transaction graphs and intelligently routes partial refunds to the correct vendor transfer, avoiding over-refunds and duplication.
+RefundOS is an AI-powered finance controller designed for multi-vendor marketplaces where a single customer payment can be distributed across multiple vendors.
 
-## The Problem
+The system reconstructs the financial transaction graph, identifies the most likely vendor relationship for a refund, validates the financial liability, and allows money movement only when the financial evidence is safe.
 
-When a customer pays a single large amount across multiple vendors via a platform like Razorpay Route, partial refunds become complex. If a single item is returned, finance teams struggle to answer:
-- Which vendor transfer should be reversed?
-- Does the vendor have enough balance?
-- Has this amount already been refunded?
-- What are the tax implications?
+### Core Principle
 
-RefundOS solves this. **AI proposes. Deterministic rules validate. Money movement is gated.**
+> **AI proposes. Rules verify. Money moves only when safe.**
 
-## Architecture
+---
 
-```mermaid
-graph TD
-    A[Customer Payment] --> B[Razorpay Route Transfer]
-    B --> C[Vendor Settlements]
-    D[Partial Refund Request] --> E[RefundOS Orchestrator]
-    E --> F[AI Reasoning Layer]
-    E --> G[Deterministic Finance Rules]
-    G --> H{Safety Gates}
-    H -->|Pass| I[Execute Reversals & Refunds]
-    H -->|Fail| J[Human Review Exception Queue]
-    I --> K[Reconciled Ledger]
-```
+# 🎯 The Problem
 
-## Features
+In a multi-vendor marketplace, a single customer payment can be split across several vendor transfers.
 
-- **Synthetic Dataset Generator**: Instantly generate 100+ complex marketplace records including anomalies.
-- **Refund Command Center**: Step-by-step AI explanation and deterministic safety checks for partial refunds.
-- **Transaction Explorer**: Instantly visualize the graph of any Order or Payment.
-- **Exception Inbox**: Catch duplicate refunds, missing transfers, and over-refunds safely before execution.
+When a customer returns one item, a simple refund is no longer enough.
 
-## Getting Started
+The system needs to determine:
 
-1. `npm install`
-2. `npx prisma db push`
-3. `npm run dev`
-4. Access `http://localhost:3000`
+- Which vendor is responsible for the refund?
+- Which transfer should be reversed?
+- Is the required transfer actually present?
+- Has this refund already been processed?
+- Is the refund financially valid?
+- What happens when the AI cannot confidently determine the correct relationship?
 
-## Demo Instructions
+Blind automation can result in:
 
-1. Hit the **"Overview"** page to see your metrics. If empty, invoke `POST /api/demo/generate` using a tool like Postman or Curl.
-2. Navigate to **Command Center** to see an AI-evaluated partial refund for a returned item.
-3. Observe how deterministic rules match the request to Vendor B's exact transfer ID and tax component, scoring a high confidence match.
-4. Navigate to **Exceptions** to see how duplicate refunds or missing transfer cases are intentionally blocked and routed to Human Review.
-5. Explore the exact money flow in the **Transaction Explorer**.
+- ❌ Incorrect vendor reversals
+- ❌ Duplicate refunds
+- ❌ Over-refunds
+- ❌ Refunds against missing transfers
+- ❌ Unsafe financial decisions
 
-## Environment Variables
+---
 
-- `DEMO_MODE=true` (simulates Razorpay webhooks without requiring live keys)
-- `OPENAI_API_KEY=` (optional, used for live AI explanation generation; falls back to mock securely if omitted)
-- `RAZORPAY_KEY_ID=` (live mode only)
-- `RAZORPAY_KEY_SECRET=` (live mode only)
+# 💡 Our Solution — RefundOS
+
+RefundOS introduces an **AI-powered financial control layer between refund requests and money movement.**
+
+Instead of allowing AI to directly execute a refund, RefundOS separates the process into multiple stages.
+
+```text
+Customer Refund Request
+          ↓
+Transaction Graph Reconstruction
+          ↓
+AI Relationship Analysis
+          ↓
+Financial Safety Validation
+          ↓
+     ┌────┼────┐
+     ↓    ↓    ↓
+    SAFE REVIEW BLOCK
+     ↓    ↓    ↓
+  EXECUTE HUMAN STOP
+     ↓
+ RECONCILIATION
