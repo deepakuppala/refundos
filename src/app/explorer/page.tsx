@@ -62,19 +62,33 @@ export default async function ExplorerPage({ searchParams }: { searchParams: { o
             <h3 className="font-medium text-lg mb-4">Financial Graph</h3>
             
             <div className="space-y-4 font-mono text-sm">
-              {graph.nodes.map(node => (
-                <div key={node.id} className="p-3 border border-border rounded-md bg-secondary/50 flex justify-between">
-                  <div>
-                    <span className="font-bold text-blue-400 mr-2">[{node.type}]</span>
-                    {node.label}
+              {graph.nodes.map(node => {
+                // Map presentation labels for cleaner demo view
+                let displayLabel = node.label;
+                if (node.type === 'ORDER') displayLabel = 'ORDER';
+                if (node.type === 'PAYMENT') displayLabel = 'PAYMENT';
+                if (node.type === 'TRANSFER' && node.label.includes('Vendor A')) displayLabel = 'TRANSFER — Vendor A';
+                if (node.type === 'TRANSFER' && node.label.includes('Vendor B')) displayLabel = 'TRANSFER — Vendor B';
+                if (node.type === 'TRANSFER' && node.label.includes('Vendor C')) displayLabel = 'TRANSFER — Vendor C';
+                if (node.type === 'REFUND') displayLabel = node.label.includes('PROCESSED') ? 'REFUND (PROCESSED)' : 'REFUND';
+
+                // We want to highlight the refund allocation specifically if it's the hero 7080
+                const isHeroRefund = node.type === 'REFUND' && node.amount === 7080;
+
+                return (
+                  <div key={node.id} className={`p-4 border rounded-md flex justify-between items-center ${isHeroRefund ? 'bg-yellow-500/10 border-yellow-500/50' : 'bg-secondary/50 border-border'}`}>
+                    <div>
+                      <span className={`font-bold mr-2 ${isHeroRefund ? 'text-yellow-500' : 'text-blue-400'}`}>[{node.type}]</span>
+                      <span className={isHeroRefund ? 'text-yellow-100 font-semibold' : ''}>{displayLabel}</span>
+                    </div>
+                    {node.amount !== undefined && (
+                      <span className={`font-mono text-base ${node.type === 'REFUND' || node.type === 'REVERSAL' ? 'text-destructive font-bold' : 'text-green-500'}`}>
+                        {node.type === 'REFUND' || node.type === 'REVERSAL' ? '-' : '+'}₹{node.amount.toLocaleString('en-IN')}
+                      </span>
+                    )}
                   </div>
-                  {node.amount !== undefined && (
-                    <span className={node.type === 'REFUND' || node.type === 'REVERSAL' ? 'text-destructive' : 'text-green-500'}>
-                      {node.type === 'REFUND' || node.type === 'REVERSAL' ? '-' : '+'}₹{node.amount / 100}
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-8">
